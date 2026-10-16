@@ -1,53 +1,55 @@
 {
-  "_comment": "Indicative fee and cost assumptions. Verify each figure against the platform's current fee page before relying on it.",
-  "home_currency": "GBP",
+  "_comment": "Indicative NZ-seller assumptions (NZD). Verify each fee, FX rate and NZ Post price against current sources before relying on it.",
+  "home_currency": "NZD",
   "fx_to_home": {
-    "GBP": 1.0,
-    "USD": 0.75,
-    "EUR": 0.8424
+    "NZD": 1.0,
+    "AUD": 1.10,
+    "USD": 1.70,
+    "GBP": 2.25
   },
-  "packaging_cost": 1.20,
+  "packaging_cost": 2.00,
   "returns_allowance_pct": 0.01,
   "channels": {
-    "ebay_uk": {
-      "label": "eBay UK",
-      "currency": "GBP",
-      "final_value_pct": 0.13,
+    "trademe_nz": {
+      "label": "Trade Me (NZ)",
+      "currency": "NZD",
+      "final_value_pct": 0.079,
+      "final_value_cap": 249.0,
+      "fixed_fee": 0.0,
+      "payment_pct": 0.0195,
+      "payment_fixed": 0.0,
+      "fx_spread_pct": 0.0,
+      "postage_cost": 7.00
+    },
+    "ebay_au": {
+      "label": "eBay Australia",
+      "currency": "AUD",
+      "final_value_pct": 0.145,
       "fixed_fee": 0.40,
       "payment_pct": 0.0,
       "payment_fixed": 0.0,
-      "fx_spread_pct": 0.0,
-      "postage_cost": 8.50
+      "fx_spread_pct": 0.01,
+      "postage_cost": 30.00
     },
-    "ebay_us_eis": {
-      "label": "eBay US (eBay Intl Shipping)",
+    "ebay_us": {
+      "label": "eBay US",
       "currency": "USD",
       "final_value_pct": 0.15,
       "fixed_fee": 0.40,
       "payment_pct": 0.0,
       "payment_fixed": 0.0,
       "fx_spread_pct": 0.01,
-      "postage_cost": 4.00
+      "postage_cost": 40.00
     },
-    "cardmarket_de": {
-      "label": "Cardmarket (DE)",
-      "currency": "EUR",
-      "final_value_pct": 0.05,
+    "direct_nz": {
+      "label": "Direct (FB/Discord/cons)",
+      "currency": "NZD",
+      "final_value_pct": 0.0,
       "fixed_fee": 0.0,
       "payment_pct": 0.0,
       "payment_fixed": 0.0,
-      "fx_spread_pct": 0.01,
-      "postage_cost": 16.00
-    },
-    "tcgplayer_us": {
-      "label": "TCGplayer (US)",
-      "currency": "USD",
-      "final_value_pct": 0.1075,
-      "fixed_fee": 0.0,
-      "payment_pct": 0.025,
-      "payment_fixed": 0.30,
-      "fx_spread_pct": 0.01,
-      "postage_cost": 12.00
+      "fx_spread_pct": 0.0,
+      "postage_cost": 7.00
     }
   }
 }

@@ -9,26 +9,29 @@ class NetProceedsTest(unittest.TestCase):
 
     def test_worked_example_matches_design_doc(self):
         results = {b.channel: b for b in compare_channels(
-            self.config, {"ebay_uk": 420, "ebay_us_eis": 560, "cardmarket_de": 495}, cost_basis=180)}
-        self.assertAlmostEqual(results["ebay_uk"].net, 351.10, places=2)
-        self.assertAlmostEqual(results["ebay_us_eis"].net, 343.10, places=2)
-        self.assertAlmostEqual(results["cardmarket_de"].net, 370.60, places=2)
+            self.config, {"trademe_nz": 850, "ebay_au": 820, "ebay_us": 560}, cost_basis=380)}
+        self.assertAlmostEqual(results["trademe_nz"].net, 748.77, places=2)
+        self.assertAlmostEqual(results["ebay_au"].net, 720.73, places=2)
+        self.assertAlmostEqual(results["ebay_us"].net, 747.48, places=2)
 
     def test_channels_ranked_by_net(self):
-        results = compare_channels(self.config, {"ebay_uk": 420, "cardmarket_de": 495}, 180)
-        self.assertEqual(results[0].channel, "cardmarket_de")
+        results = compare_channels(self.config, {"trademe_nz": 850, "ebay_au": 820}, 380)
+        self.assertEqual(results[0].channel, "trademe_nz")
 
-    def test_cheap_card_can_lose_money(self):
-        self.assertLess(net_proceeds(self.config, "ebay_uk", 5, cost_basis=2).profit, 0)
+    def test_trade_me_success_fee_is_capped(self):
+        self.assertEqual(net_proceeds(self.config, "trademe_nz", 5000).final_value_fee, 249.0)
+
+    def test_cheap_card_loses_money_overseas_but_not_locally(self):
+        self.assertLess(net_proceeds(self.config, "ebay_us", 15, cost_basis=5).profit, 0)
+        self.assertGreater(net_proceeds(self.config, "trademe_nz", 25, cost_basis=5).profit, 0)
 
     def test_grading_probabilities_must_sum_to_one(self):
         with self.assertRaises(ValueError):
-            grading_ev(self.config, "ebay_uk", 25, [("10", 0.5, 140)], 22, 8)
+            grading_ev(self.config, "ebay_us", 40, [("10", 0.5, 240)], 45, 35)
 
     def test_grading_ev(self):
-        result = grading_ev(self.config, "ebay_uk", 25,
-                            [("10", 0.15, 140), ("9", 0.55, 60), ("8", 0.30, 30)], 22, 8)
-        self.assertGreater(result["ev_of_grading"], 0)
+        result = grading_ev(self.config, "ebay_us", 40,
+                            [("10", 0.15, 240), ("9", 0.55, 100), ("8", 0.30, 55)], 45, 35)
         self.assertLess(result["worst_case_vs_raw"], 0)
 
 

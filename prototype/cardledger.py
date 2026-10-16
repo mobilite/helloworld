@@ -5,10 +5,10 @@ the seller's account, then ranks channels by profit. Fee assumptions live in
 fees.json so they can be updated without touching code.
 
 Usage:
-    python cardledger.py --cost 180 --price ebay_uk=420 --price ebay_us_eis=560 \
-        --price cardmarket_de=495
-    python cardledger.py --cost 12 --price ebay_uk=25 --grade-fee 22 --grade-shipping 8 \
-        --graded "10:0.15:140" --graded "9:0.55:60" --graded "8:0.30:30"
+    python cardledger.py --cost 380 --price trademe_nz=850 --price ebay_au=820 \
+        --price ebay_us=560
+    python cardledger.py --cost 20 --price ebay_us=40 --grade-fee 45 --grade-shipping 35 \
+        --graded "10:0.15:240" --graded "9:0.55:100" --graded "8:0.30:55"
 """
 
 from __future__ import annotations
@@ -62,6 +62,8 @@ def net_proceeds(config: dict, channel: str, price_local: float,
     gross = (price_local + postage_charged_local) * rate
 
     fvf = gross * ch["final_value_pct"]
+    if "final_value_cap" in ch:  # e.g. Trade Me caps its success fee
+        fvf = min(fvf, ch["final_value_cap"])
     fixed = ch["fixed_fee"] * rate if ch["currency"] != config["home_currency"] else ch["fixed_fee"]
     payment = gross * ch["payment_pct"] + ch["payment_fixed"] * rate
     fx_spread = gross * ch["fx_spread_pct"]
