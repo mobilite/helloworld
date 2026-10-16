@@ -1,0 +1,527 @@
+<title>CardLedger Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a seller's workbench. Inputs on the left, ranked results on the right, with the winning channel shown as a grading-slab label. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141a2e;
+  --muted: #5b6380;
+  --line: #d9deea;
+  --accent: #2443c9;
+  --accent-soft: #e6ebff;
+  --good: #0f7a4a;
+  --good-soft: #e3f4ec;
+  --bad: #b3261e;
+  --bad-soft: #fbe9e7;
+  --warn: #8a5a00;
+  --warn-soft: #fff3d6;
+  --slab: #c8102e;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1322; --surface: #171c2f; --ink: #e8ebf5; --muted: #9aa3c0; --line: #2b3250;
+    --accent: #8ea2ff; --accent-soft: #222c55; --good: #5fd39b; --good-soft: #15342a;
+    --bad: #ff8a80; --bad-soft: #3a1c1c; --warn: #f2c25b; --warn-soft: #372c12; --slab: #ff5a6e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1322; --surface: #171c2f; --ink: #e8ebf5; --muted: #9aa3c0; --line: #2b3250;
+  --accent: #8ea2ff; --accent-soft: #222c55; --good: #5fd39b; --good-soft: #15342a;
+  --bad: #ff8a80; --bad-soft: #3a1c1c; --warn: #f2c25b; --warn-soft: #372c12; --slab: #ff5a6e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 4px; }
+h1 { font-family: var(--display); font-stretch: 80%; font-weight: 800; font-size: clamp(28px, 5vw, 38px); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+h2 { font-family: var(--display); font-stretch: 85%; font-weight: 700; font-size: 20px; margin: 0; text-wrap: balance; }
+.label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+.tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.tabs button { font: 600 14px var(--body); color: var(--muted); background: none; border: 0; padding: 8px 14px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--surface); }
+.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+
+.field { display: grid; gap: 4px; }
+.field label { font-size: 13px; font-weight: 600; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+input[type="text"], input[type="number"], select {
+  width: 100%; font: 500 15px var(--body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
+}
+input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.money { position: relative; }
+.money .ccy { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font: 500 12px var(--mono); color: var(--muted); pointer-events: none; }
+.money input { padding-left: 46px; }
+
+.channels { display: grid; gap: 8px; }
+.ch { display: grid; grid-template-columns: auto minmax(0, 1fr) 140px; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.ch .name { font-weight: 600; font-size: 14px; }
+.ch .sub { font-size: 12px; color: var(--muted); }
+.ch input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.ch.off { opacity: 0.55; }
+@media (max-width: 420px) { .ch { grid-template-columns: auto minmax(0, 1fr); } .ch .money { grid-column: 1 / -1; } }
+
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.btn { font: 600 14px var(--body); border-radius: 8px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Slab label: the winning channel */
+.slab { border: 2px solid var(--slab); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.slab .top { background: var(--slab); color: #fff; padding: 6px 14px; display: flex; justify-content: space-between; gap: 8px; font: 600 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.slab .body { padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: end; }
+.slab .card { font-family: var(--display); font-stretch: 85%; font-weight: 700; font-size: 18px; line-height: 1.2; }
+.slab .where { color: var(--muted); font-size: 14px; }
+.slab .grade { text-align: right; grid-row: 1 / span 2; grid-column: 2; }
+.slab .grade b { display: block; font: 600 30px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.slab .grade span { font-size: 12px; color: var(--muted); }
+
+.results { display: grid; gap: 8px; }
+.res { border: 1px solid var(--line); border-radius: 10px; }
+.res summary, .res .sumrow { list-style: none; cursor: pointer; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; }
+.res summary::-webkit-details-marker { display: none; }
+.rank { font: 600 13px var(--mono); color: var(--muted); }
+.res .nm { font-weight: 600; }
+.res .meta { font-size: 12px; color: var(--muted); }
+.res .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.res .num b { display: block; font-weight: 600; font-size: 16px; }
+.pill { display: inline-block; font: 600 11px var(--body); padding: 2px 7px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pos { color: var(--good); }
+.neg { color: var(--bad); }
+.tablewrap { overflow-x: auto; padding: 0 12px 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+td:last-child { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.total td { font-weight: 600; border-bottom: 0; padding-top: 8px; }
+
+.verdict { padding: 14px; border-radius: 10px; display: grid; gap: 4px; }
+.verdict.good { background: var(--good-soft); }
+.verdict.bad { background: var(--bad-soft); }
+.verdict.warn { background: var(--warn-soft); }
+.verdict strong { font-family: var(--display); font-stretch: 85%; font-size: 22px; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.stat b { display: block; font: 600 18px var(--mono); font-variant-numeric: tabular-nums; }
+
+.grades { display: grid; gap: 8px; }
+.gr { display: grid; grid-template-columns: 70px 1fr 1.4fr; gap: 8px; align-items: center; }
+.gr .g { font: 600 14px var(--mono); }
+.sumline { font-size: 13px; }
+
+.settings { display: grid; gap: 14px; }
+.setgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+legend { font-weight: 600; padding: 0 6px; }
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; margin: 0; }
+.example { font: 600 11px var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 99px; width: fit-content; }
+@media (prefers-reduced-motion: no-preference) { .res, .slab { transition: border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Card<span>Ledger</span> Calculator</h1>
+    <p>See what a card really leaves you in NZD after fees, postage and exchange rates, and whether grading it is worth it.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Calculator sections">
+    <button role="tab" id="tab-sell" aria-selected="true" aria-controls="pane-sell">Where to sell</button>
+    <button role="tab" id="tab-grade" aria-selected="false" aria-controls="pane-grade">Grade or sell raw</button>
+    <button role="tab" id="tab-settings" aria-selected="false" aria-controls="pane-settings">Fees &amp; rates</button>
+  </div>
+
+  <!-- WHERE TO SELL -->
+  <section id="pane-sell" role="tabpanel" aria-labelledby="tab-sell" class="grid">
+    <div class="panel">
+      <div class="example" id="sell-example">Example card. Replace with your own.</div>
+      <div class="field">
+        <label for="card-name">Card</label>
+        <input type="text" id="card-name" placeholder="e.g. Umbreon VMAX Alt Art 215/203">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="card-cost">What you paid</label>
+          <div class="money"><span class="ccy">NZ$</span><input type="number" id="card-cost" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <div class="field">
+          <label for="card-cond">Condition</label>
+          <select id="card-cond">
+            <option>Near Mint</option><option>Lightly Played</option><option>Moderately Played</option><option>Heavily Played</option><option>Graded (slab)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Recent sold price on each site</span>
+        <p class="hint">Use sold prices, not asking prices. Each price is in that site's currency. Leave a site blank to skip it.</p>
+      </div>
+      <div class="channels" id="channel-inputs"></div>
+      <div class="btnrow">
+        <button class="btn" id="fill-from-us" type="button">Estimate blanks from the eBay US price</button>
+        <button class="btn" id="clear-card" type="button">Clear card</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Best place to sell</h2>
+      <div id="slab"></div>
+      <div class="results" id="results"></div>
+      <p class="note">Figures are estimates based on the fees and rates in the Fees &amp; rates tab. Check them against Trade Me, eBay and NZ Post before relying on them.</p>
+    </div>
+  </section>
+
+  <!-- GRADE OR SELL RAW -->
+  <section id="pane-grade" role="tabpanel" aria-labelledby="tab-grade" class="grid" hidden>
+    <div class="panel">
+      <div class="example" id="grade-example">Example card. Replace with your own.</div>
+      <div class="row2">
+        <div class="field">
+          <label for="g-channel">Where you'd sell it</label>
+          <select id="g-channel"></select>
+        </div>
+        <div class="field">
+          <label for="g-raw">Raw (ungraded) price</label>
+          <div class="money"><span class="ccy" id="g-raw-ccy">US$</span><input type="number" id="g-raw" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="g-fee">Grading fee per card</label>
+          <div class="money"><span class="ccy">NZ$</span><input type="number" id="g-fee" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <div class="field">
+          <label for="g-ship">Shipping &amp; charges per card</label>
+          <div class="money"><span class="ccy">NZ$</span><input type="number" id="g-ship" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+      </div>
+      <p class="hint">Shipping per card means the total cost of sending the batch to the grader and back, plus any GST or Customs charges, divided by the number of cards in the batch.</p>
+      <div class="field">
+        <span class="label">Likely grades and graded prices</span>
+        <p class="hint">Chances should add up to 100%. Prices are recent sold prices for that grade, in the selling site's currency.</p>
+      </div>
+      <div class="grades" id="grades"></div>
+      <div class="sumline" id="g-sum"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Is grading worth it?</h2>
+      <div id="g-verdict"></div>
+      <div class="stats" id="g-stats"></div>
+      <div class="results" id="g-per-grade"></div>
+      <p class="note">This leaves out the months the card is away being graded. If you need the cash sooner, demand a bigger gain before grading.</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="pane-settings" role="tabpanel" aria-labelledby="tab-settings" class="panel settings" hidden>
+    <h2>Fees &amp; rates</h2>
+    <p class="hint">These are rough NZ starting figures. Update them from each site's fee page and NZ Post's prices. Changes are saved on this device only.</p>
+    <fieldset>
+      <legend>Exchange rates (NZ$ per 1 unit)</legend>
+      <div class="setgrid" id="fx-settings"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Every sale</legend>
+      <div class="setgrid">
+        <div class="field"><label for="s-packaging">Packaging (NZ$)</label><input type="number" id="s-packaging" step="0.01" min="0"></div>
+        <div class="field"><label for="s-returns">Returns allowance (%)</label><input type="number" id="s-returns" step="0.1" min="0"></div>
+      </div>
+    </fieldset>
+    <div id="channel-settings" class="settings"></div>
+    <div class="btnrow"><button class="btn" id="reset-settings" type="button">Reset to starting figures</button></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "cardledger-calc-v1";
+
+  var DEFAULT_SETTINGS = {
+    fx: { NZD: 1, AUD: 1.10, USD: 1.70, GBP: 2.25 },
+    packaging: 2.00,
+    returnsPct: 1,
+    channels: [
+      { id: "trademe", label: "Trade Me", sub: "NZ buyers", ccy: "NZD", fvfPct: 7.9, cap: 249, fixed: 0, payPct: 1.95, payFixed: 0, fxPct: 0, postage: 7 },
+      { id: "ebay_au", label: "eBay Australia", sub: "Australian buyers", ccy: "AUD", fvfPct: 14.5, cap: 0, fixed: 0.40, payPct: 0, payFixed: 0, fxPct: 1, postage: 30 },
+      { id: "ebay_us", label: "eBay US", sub: "US buyers", ccy: "USD", fvfPct: 15, cap: 0, fixed: 0.40, payPct: 0, payFixed: 0, fxPct: 1, postage: 40 },
+      { id: "ebay_uk", label: "eBay UK", sub: "UK buyers", ccy: "GBP", fvfPct: 15, cap: 0, fixed: 0.40, payPct: 0, payFixed: 0, fxPct: 1, postage: 45 },
+      { id: "direct", label: "Direct", sub: "Facebook, Discord, cons", ccy: "NZD", fvfPct: 0, cap: 0, fixed: 0, payPct: 0, payFixed: 0, fxPct: 0, postage: 7 }
+    ]
+  };
+  var EXAMPLE_CARD = {
+    name: "Umbreon VMAX Alt Art 215/203", cost: 380, cond: "Near Mint", example: true,
+    prices: { trademe: 850, ebay_au: 820, ebay_us: 560, ebay_uk: "", direct: "" },
+    on: { trademe: true, ebay_au: true, ebay_us: true, ebay_uk: true, direct: true }
+  };
+  var EXAMPLE_GRADE = {
+    channel: "ebay_us", raw: 40, fee: 45, ship: 35, example: true,
+    rows: [ { g: "10", p: 15, price: 240 }, { g: "9", p: 55, price: 100 }, { g: "8", p: 30, price: 55 }, { g: "7 or less", p: 0, price: 35 } ]
+  };
+  var SYMBOL = { NZD: "NZ$", AUD: "A$", USD: "US$", GBP: "£" };
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  var state = { settings: clone(DEFAULT_SETTINGS), card: clone(EXAMPLE_CARD), grade: clone(EXAMPLE_GRADE), tab: "sell" };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && saved.settings && saved.card && saved.grade) state = saved;
+  } catch (e) { /* storage unavailable: use defaults */ }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var nzd = new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD", currencyDisplay: "narrowSymbol" });
+  function money(v) { return (v < 0 ? "−" : "") + "NZ" + nzd.format(Math.abs(v)).replace(/^NZ/, ""); }
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function channel(id) { return state.settings.channels.find(function (c) { return c.id === id; }); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  // Same logic as prototype/cardledger.py net_proceeds()
+  function netProceeds(ch, priceLocal, cost) {
+    var s = state.settings, rate = num(s.fx[ch.ccy]) || 1;
+    var gross = priceLocal * rate;
+    var fvf = gross * num(ch.fvfPct) / 100;
+    if (num(ch.cap) > 0) fvf = Math.min(fvf, num(ch.cap));
+    var fixed = num(ch.fixed) * rate;
+    var payment = gross * num(ch.payPct) / 100 + num(ch.payFixed) * rate;
+    var fxSpread = gross * num(ch.fxPct) / 100;
+    var postage = num(ch.postage), packaging = num(s.packaging);
+    var returns = gross * num(s.returnsPct) / 100;
+    var net = gross - fvf - fixed - payment - fxSpread - postage - packaging - returns;
+    return { ch: ch, local: priceLocal, gross: gross, fvf: fvf, fixed: fixed, payment: payment, fxSpread: fxSpread,
+             postage: postage, packaging: packaging, returns: returns, net: net, profit: net - cost,
+             margin: gross ? (net - cost) / gross : 0, shipShare: gross ? (postage + packaging) / gross : 1 };
+  }
+
+  /* ---------- tabs ---------- */
+  var tabs = ["sell", "grade", "settings"];
+  function showTab(t) {
+    state.tab = t;
+    tabs.forEach(function (x) {
+      document.getElementById("tab-" + x).setAttribute("aria-selected", String(x === t));
+      document.getElementById("pane-" + x).hidden = x !== t;
+    });
+    save();
+  }
+  tabs.forEach(function (t) { document.getElementById("tab-" + t).addEventListener("click", function () { showTab(t); }); });
+
+  /* ---------- where to sell ---------- */
+  function buildChannelInputs() {
+    var box = document.getElementById("channel-inputs");
+    box.innerHTML = state.settings.channels.map(function (c) {
+      var on = state.card.on[c.id] !== false;
+      var p = state.card.prices[c.id]; if (p === undefined) p = "";
+      return '<div class="ch' + (on ? "" : " off") + '">' +
+        '<input type="checkbox" id="on-' + c.id + '" aria-label="Include ' + esc(c.label) + '"' + (on ? " checked" : "") + '>' +
+        '<label for="price-' + c.id + '"><span class="name">' + esc(c.label) + '</span><br><span class="sub">' + esc(c.sub) + '</span></label>' +
+        '<div class="money"><span class="ccy">' + SYMBOL[c.ccy] + '</span><input type="number" id="price-' + c.id + '" min="0" step="0.01" inputmode="decimal" value="' + esc(p) + '"></div>' +
+        '</div>';
+    }).join("");
+    state.settings.channels.forEach(function (c) {
+      document.getElementById("price-" + c.id).addEventListener("input", function (e) { state.card.prices[c.id] = e.target.value; touchCard(); });
+      document.getElementById("on-" + c.id).addEventListener("change", function (e) {
+        state.card.on[c.id] = e.target.checked; e.target.closest(".ch").classList.toggle("off", !e.target.checked); touchCard();
+      });
+    });
+  }
+  function touchCard() { state.card.example = false; renderSell(); save(); }
+
+  function renderSell() {
+    document.getElementById("sell-example").hidden = !state.card.example;
+    var cost = num(state.card.cost);
+    var rows = state.settings.channels.filter(function (c) {
+      return state.card.on[c.id] !== false && num(state.card.prices[c.id]) > 0;
+    }).map(function (c) { return netProceeds(c, num(state.card.prices[c.id]), cost); })
+      .sort(function (a, b) { return b.net - a.net; });
+
+    var slab = document.getElementById("slab");
+    var list = document.getElementById("results");
+    if (!rows.length) {
+      slab.innerHTML = "";
+      list.innerHTML = '<p class="hint">Enter a sold price for at least one site to see what you would keep.</p>';
+      return;
+    }
+    var best = rows[0];
+    var gap = rows.length > 1 ? best.net - rows[1].net : null;
+    slab.innerHTML = '<div class="slab"><div class="top"><span>Best channel</span><span>' + esc(state.card.cond) + '</span></div>' +
+      '<div class="body"><div class="card">' + esc(state.card.name || "Untitled card") + '</div>' +
+      '<div class="grade"><b class="' + (best.profit >= 0 ? "pos" : "neg") + '">' + money(best.profit) + '</b><span>profit</span></div>' +
+      '<div class="where">' + esc(best.ch.label) + ': you keep ' + money(best.net) +
+      (gap !== null ? (gap < 15 ? ", only " + money(gap) + " ahead of " + esc(rows[1].ch.label) + ". Pick whichever sells faster." : ", " + money(gap) + " ahead of " + esc(rows[1].ch.label) + ".") : ".") +
+      '</div></div></div>';
+
+    list.innerHTML = rows.map(function (r, i) {
+      var pills = "";
+      if (r.profit < 0) pills += '<span class="pill bad">Loses money</span>';
+      else if (r.shipShare > 0.15) pills += '<span class="pill warn">Postage ' + Math.round(r.shipShare * 100) + '% of price</span>';
+      if (i === 0 && r.profit >= 0) pills += '<span class="pill good">Best</span>';
+      var line = function (label, v, neg) { return '<tr><td>' + label + '</td><td>' + (neg && v ? "−" : "") + money(Math.abs(v)).replace("−", "") + '</td></tr>'; };
+      return '<details class="res"><summary><span class="rank">' + (i + 1) + '</span>' +
+        '<span><span class="nm">' + esc(r.ch.label) + '</span>' + pills + '<br><span class="meta">Sells for ' + SYMBOL[r.ch.ccy] + r.local.toLocaleString("en-NZ") + ' = ' + money(r.gross) + ' · margin ' + Math.round(r.margin * 100) + '%</span></span>' +
+        '<span class="num"><b>' + money(r.net) + '</b><span class="meta">you keep</span></span></summary>' +
+        '<div class="tablewrap"><table>' +
+        line("Sale price in NZ$", r.gross) +
+        line("Site fee" + (num(r.ch.cap) > 0 && r.fvf >= num(r.ch.cap) ? " (capped)" : ""), r.fvf, true) +
+        line("Fixed order fee", r.fixed, true) +
+        line("Payment fee", r.payment, true) +
+        line("Exchange-rate margin", r.fxSpread, true) +
+        line("Postage", r.postage, true) +
+        line("Packaging", r.packaging, true) +
+        line("Returns allowance", r.returns, true) +
+        '<tr class="total"><td>You keep</td><td>' + money(r.net) + '</td></tr>' +
+        '<tr><td>Minus what you paid</td><td>−' + money(cost).replace("−", "") + '</td></tr>' +
+        '<tr class="total"><td>Profit</td><td class="' + (r.profit >= 0 ? "pos" : "neg") + '">' + money(r.profit) + '</td></tr>' +
+        '</table></div></details>';
+    }).join("");
+  }
+
+  var nameEl = document.getElementById("card-name"), costEl = document.getElementById("card-cost"), condEl = document.getElementById("card-cond");
+  function loadCardFields() { nameEl.value = state.card.name; costEl.value = state.card.cost; condEl.value = state.card.cond; }
+  nameEl.addEventListener("input", function () { state.card.name = nameEl.value; touchCard(); });
+  costEl.addEventListener("input", function () { state.card.cost = costEl.value; touchCard(); });
+  condEl.addEventListener("change", function () { state.card.cond = condEl.value; touchCard(); });
+  document.getElementById("clear-card").addEventListener("click", function () {
+    state.card = { name: "", cost: "", cond: "Near Mint", example: false, prices: {}, on: {} };
+    loadCardFields(); buildChannelInputs(); renderSell(); save(); nameEl.focus();
+  });
+  document.getElementById("fill-from-us").addEventListener("click", function () {
+    var us = num(state.card.prices.ebay_us);
+    if (!us) { document.getElementById("price-ebay_us").focus(); return; }
+    var usdNzd = num(state.settings.fx.USD);
+    state.settings.channels.forEach(function (c) {
+      if (c.id === "ebay_us" || num(state.card.prices[c.id]) > 0) return;
+      var est = us * usdNzd / (num(state.settings.fx[c.ccy]) || 1);
+      // NZ local markets tend to sell a little under US prices
+      if (c.ccy === "NZD") est *= 0.9;
+      state.card.prices[c.id] = String(Math.round(est));
+    });
+    buildChannelInputs(); touchCard();
+  });
+
+  /* ---------- grading ---------- */
+  var gCh = document.getElementById("g-channel");
+  function buildGradeInputs() {
+    gCh.innerHTML = state.settings.channels.map(function (c) { return '<option value="' + c.id + '">' + esc(c.label) + '</option>'; }).join("");
+    if (!channel(state.grade.channel)) state.grade.channel = state.settings.channels[0].id;
+    gCh.value = state.grade.channel;
+    document.getElementById("g-raw").value = state.grade.raw;
+    document.getElementById("g-fee").value = state.grade.fee;
+    document.getElementById("g-ship").value = state.grade.ship;
+    var ccy = SYMBOL[channel(state.grade.channel).ccy];
+    document.getElementById("g-raw-ccy").textContent = ccy;
+    document.getElementById("grades").innerHTML =
+      '<div class="gr label"><span>Grade</span><span>Chance %</span><span>Sold price</span></div>' +
+      state.grade.rows.map(function (r, i) {
+        return '<div class="gr"><span class="g">' + esc(r.g) + '</span>' +
+          '<input type="number" id="gp-' + i + '" min="0" max="100" step="1" value="' + esc(r.p) + '" aria-label="Chance of grade ' + esc(r.g) + '">' +
+          '<div class="money"><span class="ccy">' + ccy + '</span><input type="number" id="gv-' + i + '" min="0" step="0.01" value="' + esc(r.price) + '" aria-label="Sold price at grade ' + esc(r.g) + '"></div></div>';
+      }).join("");
+    state.grade.rows.forEach(function (r, i) {
+      document.getElementById("gp-" + i).addEventListener("input", function (e) { r.p = e.target.value; touchGrade(); });
+      document.getElementById("gv-" + i).addEventListener("input", function (e) { r.price = e.target.value; touchGrade(); });
+    });
+  }
+  gCh.addEventListener("change", function () { state.grade.channel = gCh.value; buildGradeInputs(); touchGrade(); });
+  ["raw", "fee", "ship"].forEach(function (k) {
+    document.getElementById("g-" + k).addEventListener("input", function (e) { state.grade[k] = e.target.value; touchGrade(); });
+  });
+  function touchGrade() { state.grade.example = false; renderGrade(); save(); }
+
+  function renderGrade() {
+    document.getElementById("grade-example").hidden = !state.grade.example;
+    var ch = channel(state.grade.channel);
+    var total = state.grade.rows.reduce(function (a, r) { return a + num(r.p); }, 0);
+    var sumEl = document.getElementById("g-sum");
+    sumEl.innerHTML = "Chances add up to <b>" + total + "%</b>" + (Math.abs(total - 100) > 1 ? ' <span class="pill bad">Must be 100%</span>' : "");
+    var verdict = document.getElementById("g-verdict"), stats = document.getElementById("g-stats"), per = document.getElementById("g-per-grade");
+    if (Math.abs(total - 100) > 1 || !num(state.grade.raw)) {
+      verdict.innerHTML = '<div class="verdict warn"><strong>Not enough information yet</strong><span>Enter a raw price, and make the grade chances add up to 100%.</span></div>';
+      stats.innerHTML = ""; per.innerHTML = ""; return;
+    }
+    var rawNet = netProceeds(ch, num(state.grade.raw), 0).net;
+    var gradingCost = num(state.grade.fee) + num(state.grade.ship);
+    var perGrade = state.grade.rows.map(function (r) {
+      return { g: r.g, p: num(r.p) / 100, net: netProceeds(ch, num(r.price), 0).net - gradingCost };
+    });
+    var expected = perGrade.reduce(function (a, r) { return a + r.p * r.net; }, 0);
+    var ev = expected - rawNet;
+    var likely = perGrade.filter(function (r) { return r.p > 0; });
+    var worst = Math.min.apply(null, likely.map(function (r) { return r.net; })) - rawNet;
+    var cls, title, text;
+    if (ev <= 0) { cls = "bad"; title = "Sell it raw"; text = "On average, grading leaves you with less than selling it ungraded."; }
+    else if (ev < 0.5 * gradingCost) { cls = "warn"; title = "Marginal"; text = "The average gain is small for the cost and the months it's away. Only grade it if you're confident about its condition."; }
+    else { cls = "good"; title = "Grade it"; text = "The expected gain clearly covers the grading cost. Add it to your next batch."; }
+    verdict.innerHTML = '<div class="verdict ' + cls + '"><strong>' + title + '</strong><span>' + text + '</span></div>';
+    stats.innerHTML =
+      '<div class="stat"><span class="label">Sell raw, you keep</span><b>' + money(rawNet) + '</b></div>' +
+      '<div class="stat"><span class="label">Grade, average keep</span><b>' + money(expected) + '</b></div>' +
+      '<div class="stat"><span class="label">Average gain</span><b class="' + (ev >= 0 ? "pos" : "neg") + '">' + (ev >= 0 ? "+" : "") + money(ev) + '</b></div>' +
+      '<div class="stat"><span class="label">Worst case vs raw</span><b class="' + (worst >= 0 ? "pos" : "neg") + '">' + (worst >= 0 ? "+" : "") + money(worst) + '</b></div>';
+    per.innerHTML = '<span class="label">If it comes back as…</span>' + perGrade.map(function (r) {
+      var diff = r.net - rawNet;
+      return '<div class="res"><div class="sumrow"><span class="rank">' + esc(r.g) + '</span><span class="meta">' + Math.round(r.p * 100) + '% chance</span>' +
+        '<span class="num"><b>' + money(r.net) + '</b><span class="meta ' + (diff >= 0 ? "pos" : "neg") + '">' + (diff >= 0 ? "+" : "") + money(diff) + ' vs raw</span></span></div></div>';
+    }).join("");
+  }
+
+  /* ---------- settings ---------- */
+  var CH_FIELDS = [
+    ["fvfPct", "Site fee (%)"], ["cap", "Fee cap (NZ$, 0 = none)"], ["fixed", "Fixed fee (site currency)"],
+    ["payPct", "Payment fee (%)"], ["payFixed", "Payment fixed (site currency)"], ["fxPct", "Exchange margin (%)"], ["postage", "Postage (NZ$)"]
+  ];
+  function buildSettings() {
+    var fx = state.settings.fx;
+    document.getElementById("fx-settings").innerHTML = ["USD", "AUD", "GBP"].map(function (c) {
+      return '<div class="field"><label for="fx-' + c + '">1 ' + c + ' in NZ$</label><input type="number" id="fx-' + c + '" step="0.0001" min="0" value="' + esc(fx[c]) + '"></div>';
+    }).join("");
+    ["USD", "AUD", "GBP"].forEach(function (c) {
+      document.getElementById("fx-" + c).addEventListener("input", function (e) { fx[c] = e.target.value; settingsChanged(); });
+    });
+    var pk = document.getElementById("s-packaging"), rt = document.getElementById("s-returns");
+    pk.value = state.settings.packaging; rt.value = state.settings.returnsPct;
+    pk.oninput = function () { state.settings.packaging = pk.value; settingsChanged(); };
+    rt.oninput = function () { state.settings.returnsPct = rt.value; settingsChanged(); };
+
+    document.getElementById("channel-settings").innerHTML = state.settings.channels.map(function (c) {
+      return '<fieldset><legend>' + esc(c.label) + ' <span class="hint">(' + c.ccy + ')</span></legend><div class="setgrid">' +
+        CH_FIELDS.map(function (f) {
+          return '<div class="field"><label for="s-' + c.id + '-' + f[0] + '">' + f[1] + '</label><input type="number" id="s-' + c.id + '-' + f[0] + '" step="0.01" min="0" value="' + esc(c[f[0]]) + '"></div>';
+        }).join("") + '</div></fieldset>';
+    }).join("");
+    state.settings.channels.forEach(function (c) {
+      CH_FIELDS.forEach(function (f) {
+        document.getElementById("s-" + c.id + "-" + f[0]).addEventListener("input", function (e) { c[f[0]] = e.target.value; settingsChanged(); });
+      });
+    });
+  }
+  function settingsChanged() { renderSell(); renderGrade(); save(); }
+  document.getElementById("reset-settings").addEventListener("click", function () {
+    state.settings = clone(DEFAULT_SETTINGS); buildSettings(); buildChannelInputs(); buildGradeInputs(); settingsChanged();
+  });
+
+  /* ---------- boot ---------- */
+  loadCardFields(); buildChannelInputs(); buildGradeInputs(); buildSettings();
+  renderSell(); renderGrade();
+  showTab(tabs.indexOf(state.tab) >= 0 ? state.tab : "sell");
+})();
+</script>

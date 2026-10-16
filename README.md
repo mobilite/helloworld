@@ -3,6 +3,7 @@
 A platform to help a Pokémon card reseller in New Zealand value cards against international markets and see real profit after every cost.
 
 - **Solution design:** [docs/SOLUTION_DESIGN.md](docs/SOLUTION_DESIGN.md)
+- **Web calculator (phone or computer):** [web/calculator.html](web/calculator.html)
 - **Prototype profit and channel calculator:** [prototype/](prototype/) (Python 3, standard library only)
 
 ```bash
