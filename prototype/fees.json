@@ -1,0 +1,53 @@
+{
+  "_comment": "Indicative fee and cost assumptions. Verify each figure against the platform's current fee page before relying on it.",
+  "home_currency": "GBP",
+  "fx_to_home": {
+    "GBP": 1.0,
+    "USD": 0.75,
+    "EUR": 0.8424
+  },
+  "packaging_cost": 1.20,
+  "returns_allowance_pct": 0.01,
+  "channels": {
+    "ebay_uk": {
+      "label": "eBay UK",
+      "currency": "GBP",
+      "final_value_pct": 0.13,
+      "fixed_fee": 0.40,
+      "payment_pct": 0.0,
+      "payment_fixed": 0.0,
+      "fx_spread_pct": 0.0,
+      "postage_cost": 8.50
+    },
+    "ebay_us_eis": {
+      "label": "eBay US (eBay Intl Shipping)",
+      "currency": "USD",
+      "final_value_pct": 0.15,
+      "fixed_fee": 0.40,
+      "payment_pct": 0.0,
+      "payment_fixed": 0.0,
+      "fx_spread_pct": 0.01,
+      "postage_cost": 4.00
+    },
+    "cardmarket_de": {
+      "label": "Cardmarket (DE)",
+      "currency": "EUR",
+      "final_value_pct": 0.05,
+      "fixed_fee": 0.0,
+      "payment_pct": 0.0,
+      "payment_fixed": 0.0,
+      "fx_spread_pct": 0.01,
+      "postage_cost": 16.00
+    },
+    "tcgplayer_us": {
+      "label": "TCGplayer (US)",
+      "currency": "USD",
+      "final_value_pct": 0.1075,
+      "fixed_fee": 0.0,
+      "payment_pct": 0.025,
+      "payment_fixed": 0.30,
+      "fx_spread_pct": 0.01,
+      "postage_cost": 12.00
+    }
+  }
+}
