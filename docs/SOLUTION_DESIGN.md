@@ -142,6 +142,14 @@ For each item and each market, the engine produces:
 - **Trend:** 30- and 90-day price change, plus a flag for sudden moves (new set announcements, reprints and tournament results all move prices).
 - **Condition adjustment:** when there are no comparables for the exact condition, a multiplier applies (e.g. LP ≈ 0.75–0.85× NM). The multiplier is learned from cards that do have data for both conditions.
 
+**Honesty rules** (built into the web calculator's *Value a card* tab):
+- Only completed sales count. A sale is used only when it is the same card (set, number, language, variant) in the same raw condition or the same grader and grade. Lots, proxies, other-language prints, sales older than 180 days and best-offer sales with hidden prices are excluded, and the reason is shown next to each one.
+- Prices include buyer-paid postage and are converted to NZD. They are weighted by recency (30-day half-life), and outliers are removed by 1.5×IQR once there are 5 or more sales.
+- The value is the weighted median, with the P25–P75 range. Confidence is **High** with 6+ sales, one in the last 30 days and P75/P25 ≤ 1.35. It is **Medium** with 4+ sales, one in the last 60 days and P75/P25 ≤ 1.6. Anything else is **Low**.
+- **With fewer than 3 matching sales, no value is shown.**
+- The user can include or exclude any sale, and the override is labelled.
+- Claude is used only to *read* pasted sold listings into structured rows and flag mismatches. It never supplies prices, and the value itself is calculated by fixed rules.
+
 **Comparables hierarchy** (the engine falls back down the list until it has at least 5 data points):
 1. Same card, variant, language and condition/grade, last 30 days
 2. Same as above, last 90 days

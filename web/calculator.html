@@ -138,23 +138,135 @@ fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 12px; ma
 legend { font-weight: 600; padding: 0 6px; }
 .note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; margin: 0; }
 .example { font: 600 11px var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 99px; width: fit-content; }
+textarea { width: 100%; min-height: 110px; font: 13px/1.45 var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; resize: vertical; }
+.sub-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.valuebox { display: grid; gap: 6px; padding: 16px; border-radius: 10px; background: var(--accent-soft); }
+.valuebox .big { font: 600 clamp(30px, 6vw, 40px)/1.05 var(--mono); font-variant-numeric: tabular-nums; }
+.valuebox .why { font-size: 13px; color: var(--muted); }
+.comps { display: grid; gap: 6px; }
+.comp { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.comp.out { background: var(--bg); }
+.comp.out .ctitle, .comp.out .num b { color: var(--muted); }
+.comp input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+.comp .ctitle { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.comp .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.comp .num b { display: block; font-weight: 600; }
+.comp .pill { margin: 4px 0 0; }
+.xbtn { background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.mtable th { font-size: 12px; font-weight: 600; color: var(--muted); text-align: right; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.mtable th:first-child, .mtable td:first-child { text-align: left; }
+.mtable td { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.mtable td:first-child { font-family: var(--body); }
+.addform { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; align-items: end; }
+.addform .wide { grid-column: 1 / -1; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.5em; margin: 0; }
+.status.err { color: var(--bad); }
+.how { font-size: 13px; color: var(--muted); }
+.how summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.how ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 @media (prefers-reduced-motion: no-preference) { .res, .slab { transition: border-color .15s; } }
 </style>
 
 <div class="wrap">
   <header>
     <h1>Card<span>Ledger</span> Calculator</h1>
-    <p>See what a card really leaves you in NZD after fees, postage and exchange rates, and whether grading it is worth it.</p>
+    <p>Value a card from what the same card has actually sold for recently. Then see what it would leave you in NZD after fees, postage and exchange rates, and whether grading it is worth it.</p>
   </header>
 
   <div class="tabs" role="tablist" aria-label="Calculator sections">
-    <button role="tab" id="tab-sell" aria-selected="true" aria-controls="pane-sell">Where to sell</button>
+    <button role="tab" id="tab-value" aria-selected="true" aria-controls="pane-value">Value a card</button>
+    <button role="tab" id="tab-sell" aria-selected="false" aria-controls="pane-sell">Where to sell</button>
     <button role="tab" id="tab-grade" aria-selected="false" aria-controls="pane-grade">Grade or sell raw</button>
     <button role="tab" id="tab-settings" aria-selected="false" aria-controls="pane-settings">Fees &amp; rates</button>
   </div>
 
+  <!-- VALUE A CARD -->
+  <section id="pane-value" role="tabpanel" aria-labelledby="tab-value" class="grid">
+    <div class="panel">
+      <div class="example" id="value-example">Example sales. Paste or add your own to replace them.</div>
+      <div class="field">
+        <label for="v-name">Card</label>
+        <input type="text" id="v-name" placeholder="e.g. Umbreon VMAX Alt Art">
+      </div>
+      <div class="field">
+        <label for="v-details">Set, number, language, variant</label>
+        <input type="text" id="v-details" placeholder="e.g. Evolving Skies 215/203, English">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="v-type">Your copy is</label>
+          <select id="v-type"><option value="raw">Raw (ungraded)</option><option value="graded">Graded (slab)</option></select>
+        </div>
+        <div class="field" id="v-cond-wrap">
+          <label for="v-cond">Condition</label>
+          <select id="v-cond"><option value="NM">Near Mint</option><option value="LP">Lightly Played</option><option value="MP">Moderately Played</option><option value="HP">Heavily Played</option><option value="DMG">Damaged</option></select>
+        </div>
+        <div class="field" id="v-company-wrap" hidden>
+          <label for="v-company">Grader</label>
+          <select id="v-company"><option>PSA</option><option>CGC</option><option>BGS</option><option>ACE</option><option>TAG</option></select>
+        </div>
+        <div class="field" id="v-grade-wrap" hidden>
+          <label for="v-grade">Grade</label>
+          <input type="text" id="v-grade" inputmode="decimal" placeholder="e.g. 10">
+        </div>
+      </div>
+
+      <div class="field" id="paste-box" hidden>
+        <span class="label">Paste sold listings</span>
+        <p class="hint">On eBay, search the card, tick <b>Sold items</b>, then select and copy the results page. 130point.com also works, and it shows real best-offer prices. Trade Me and PriceCharting pages work too.</p>
+        <textarea id="paste-text" placeholder="Paste the sold listings here"></textarea>
+        <div class="row2">
+          <div class="field">
+            <label for="paste-site">Copied from</label>
+            <select id="paste-site"><option value="ebay_us">eBay US (ebay.com)</option><option value="ebay_au">eBay Australia</option><option value="ebay_uk">eBay UK</option><option value="trademe">Trade Me</option><option value="other">Other / 130point / PriceCharting</option></select>
+          </div>
+          <div class="field">
+            <span class="label" aria-hidden="true">&nbsp;</span>
+            <div class="btnrow"><button class="btn primary" id="paste-read" type="button">Read these sales</button><button class="btn" id="paste-stop" type="button" hidden>Stop</button></div>
+          </div>
+        </div>
+        <p class="status" id="paste-status" role="status"></p>
+      </div>
+
+      <div class="field">
+        <span class="label">Add a sale by hand</span>
+        <div class="addform">
+          <div class="field"><label for="a-date">Sold on</label><input type="date" id="a-date"></div>
+          <div class="field"><label for="a-site">Site</label><select id="a-site"><option value="ebay_us">eBay US</option><option value="ebay_au">eBay AU</option><option value="ebay_uk">eBay UK</option><option value="trademe">Trade Me</option><option value="other">Other (NZ$)</option></select></div>
+          <div class="field"><label for="a-price">Sold price</label><input type="number" id="a-price" min="0" step="0.01" inputmode="decimal"></div>
+          <div class="field"><label for="a-post">Buyer paid postage</label><input type="number" id="a-post" min="0" step="0.01" inputmode="decimal" placeholder="0"></div>
+          <div class="field"><label for="a-cond">Condition</label><select id="a-cond"><option value="NM">Near Mint</option><option value="LP">Lightly Played</option><option value="MP">Moderately Played</option><option value="HP">Heavily Played</option><option value="DMG">Damaged</option><option value="graded">Graded</option></select></div>
+          <div class="field" id="a-grade-wrap" hidden><label for="a-grade">Grader and grade</label><input type="text" id="a-grade" placeholder="e.g. PSA 9"></div>
+          <div class="field wide"><label for="a-title">Listing title or note</label><input type="text" id="a-title" placeholder="Optional"></div>
+          <div class="btnrow wide"><button class="btn" id="a-add" type="button">Add sale</button></div>
+        </div>
+        <p class="status" id="add-status" role="status"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>What it's really worth</h2>
+      <div id="v-result"></div>
+      <div class="sub-h"><span class="label" id="comps-count">Sales</span><button class="btn" id="comps-clear" type="button">Clear all sales</button></div>
+      <div class="comps" id="comps"></div>
+      <details class="how">
+        <summary>How this value is worked out</summary>
+        <ul>
+          <li>Only completed sales are used, never asking prices.</li>
+          <li>A sale counts only if it's the same card in the same condition or grade as yours. Lots, other languages, best-offer sales with hidden prices and sales over 6 months old are left out.</li>
+          <li>Each price includes the postage the buyer paid, converted to NZ$ using the rates in Fees &amp; rates.</li>
+          <li>Recent sales count more: a sale from 30 days ago counts half as much as one from today.</li>
+          <li>With 5 or more sales, prices far outside the normal range are left out as unusual.</li>
+          <li>The value is the middle (median) price. The range shows where the middle half of sales landed.</li>
+          <li>With fewer than 3 matching sales, no value is given.</li>
+          <li>Tick or untick any sale to override these rules. Your choice is marked.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
   <!-- WHERE TO SELL -->
-  <section id="pane-sell" role="tabpanel" aria-labelledby="tab-sell" class="grid">
+  <section id="pane-sell" role="tabpanel" aria-labelledby="tab-sell" class="grid" hidden>
     <div class="panel">
       <div class="example" id="sell-example">Example card. Replace with your own.</div>
       <div class="field">
@@ -260,7 +372,7 @@ legend { font-weight: 600; padding: 0 6px; }
   var KEY = "cardledger-calc-v1";
 
   var DEFAULT_SETTINGS = {
-    fx: { NZD: 1, AUD: 1.10, USD: 1.70, GBP: 2.25 },
+    fx: { NZD: 1, AUD: 1.10, USD: 1.70, GBP: 2.25, EUR: 1.90 },
     packaging: 2.00,
     returnsPct: 1,
     channels: [
@@ -280,14 +392,51 @@ legend { font-weight: 600; padding: 0 6px; }
     channel: "ebay_us", raw: 40, fee: 45, ship: 35, example: true,
     rows: [ { g: "10", p: 15, price: 240 }, { g: "9", p: 55, price: 100 }, { g: "8", p: 30, price: 55 }, { g: "7 or less", p: 0, price: 35 } ]
   };
-  var SYMBOL = { NZD: "NZ$", AUD: "A$", USD: "US$", GBP: "£" };
+  var SYMBOL = { NZD: "NZ$", AUD: "A$", USD: "US$", GBP: "£", EUR: "€" };
+  var SITES = {
+    ebay_us: { label: "eBay US", ccy: "USD" }, ebay_au: { label: "eBay AU", ccy: "AUD" },
+    ebay_uk: { label: "eBay UK", ccy: "GBP" }, trademe: { label: "Trade Me", ccy: "NZD" }, other: { label: "Other", ccy: "NZD" }
+  };
+  var RAW_CONDS = { NM: "Near Mint", LP: "Lightly Played", MP: "Moderately Played", HP: "Heavily Played", DMG: "Damaged" };
+
+  function isoDaysAgo(d) { var t = new Date(); t.setDate(t.getDate() - d); return t.toISOString().slice(0, 10); }
+  function buildExampleValue() {
+    var n = 0;
+    function c(d, site, price, postage, cond, title, extra) {
+      n += 1;
+      return Object.assign({ id: "ex" + n, date: isoDaysAgo(d), site: site, ccy: SITES[site].ccy, price: price, postage: postage,
+        graded: false, cond: cond, company: null, grade: null, title: title, sameCard: true, mismatch: null,
+        isLot: false, bestOffer: false, include: null }, extra || {});
+    }
+    var t = "Umbreon VMAX 215/203 Alt Art Evolving Skies";
+    return {
+      example: true, details: "Evolving Skies 215/203, English, alternate art", graded: false, cond: "NM", company: "PSA", grade: "10", pasteSite: "ebay_us",
+      comps: [
+        c(3, "ebay_us", 560, 0, "NM", t + " NM"),
+        c(6, "ebay_au", 820, 0, "NM", t + " Near Mint"),
+        c(7, "ebay_us", 430, 0, "LP", t + " LP whitening"),
+        c(9, "ebay_us", 550, 5, "NM", t + " Pack Fresh"),
+        c(11, "trademe", 850, 6, "NM", t + " mint"),
+        c(12, "ebay_us", 1450, 0, "graded", t + " PSA 10", { graded: true, cond: "graded", company: "PSA", grade: "10" }),
+        c(16, "ebay_us", 575, 0, "NM", t + " NM/M"),
+        c(19, "ebay_au", 790, 10, "NM", t + " NM"),
+        c(20, "ebay_us", 900, 0, "NM", "Umbreon VMAX alt art + Espeon V alt art + Sylveon lot", { isLot: true }),
+        c(22, "ebay_us", 260, 0, "NM", "Umbreon VMAX SA s6a 095/069 Japanese Eevee Heroes", { sameCard: false, mismatch: "Japanese Eevee Heroes print" }),
+        c(24, "ebay_us", 530, 6, "NM", t + " NM"),
+        c(30, "ebay_us", 980, 0, "NM", t + " NM"),
+        c(41, "ebay_us", 590, 0, "NM", t + " near mint")
+      ]
+    };
+  }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  var state = { settings: clone(DEFAULT_SETTINGS), card: clone(EXAMPLE_CARD), grade: clone(EXAMPLE_GRADE), tab: "sell" };
+  var state = { settings: clone(DEFAULT_SETTINGS), card: clone(EXAMPLE_CARD), grade: clone(EXAMPLE_GRADE), value: buildExampleValue(), tab: "value" };
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || "null");
     if (saved && saved.settings && saved.card && saved.grade) state = saved;
   } catch (e) { /* storage unavailable: use defaults */ }
+  if (!state.value) { state.value = buildExampleValue(); state.tab = "value"; }
+  if (!state.settings.fx.EUR) state.settings.fx.EUR = DEFAULT_SETTINGS.fx.EUR;
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
   var nzd = new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD", currencyDisplay: "narrowSymbol" });
@@ -314,7 +463,7 @@ legend { font-weight: 600; padding: 0 6px; }
   }
 
   /* ---------- tabs ---------- */
-  var tabs = ["sell", "grade", "settings"];
+  var tabs = ["value", "sell", "grade", "settings"];
   function showTab(t) {
     state.tab = t;
     tabs.forEach(function (x) {
@@ -397,7 +546,7 @@ legend { font-weight: 600; padding: 0 6px; }
 
   var nameEl = document.getElementById("card-name"), costEl = document.getElementById("card-cost"), condEl = document.getElementById("card-cond");
   function loadCardFields() { nameEl.value = state.card.name; costEl.value = state.card.cost; condEl.value = state.card.cond; }
-  nameEl.addEventListener("input", function () { state.card.name = nameEl.value; touchCard(); });
+  nameEl.addEventListener("input", function () { state.card.name = nameEl.value; document.getElementById("v-name").value = nameEl.value; touchCard(); });
   costEl.addEventListener("input", function () { state.card.cost = costEl.value; touchCard(); });
   condEl.addEventListener("change", function () { state.card.cond = condEl.value; touchCard(); });
   document.getElementById("clear-card").addEventListener("click", function () {
@@ -491,10 +640,10 @@ legend { font-weight: 600; padding: 0 6px; }
   ];
   function buildSettings() {
     var fx = state.settings.fx;
-    document.getElementById("fx-settings").innerHTML = ["USD", "AUD", "GBP"].map(function (c) {
+    document.getElementById("fx-settings").innerHTML = ["USD", "AUD", "GBP", "EUR"].map(function (c) {
       return '<div class="field"><label for="fx-' + c + '">1 ' + c + ' in NZ$</label><input type="number" id="fx-' + c + '" step="0.0001" min="0" value="' + esc(fx[c]) + '"></div>';
     }).join("");
-    ["USD", "AUD", "GBP"].forEach(function (c) {
+    ["USD", "AUD", "GBP", "EUR"].forEach(function (c) {
       document.getElementById("fx-" + c).addEventListener("input", function (e) { fx[c] = e.target.value; settingsChanged(); });
     });
     var pk = document.getElementById("s-packaging"), rt = document.getElementById("s-returns");
@@ -514,14 +663,321 @@ legend { font-weight: 600; padding: 0 6px; }
       });
     });
   }
-  function settingsChanged() { renderSell(); renderGrade(); save(); }
+  function settingsChanged() { renderSell(); renderGrade(); renderValue(); save(); }
   document.getElementById("reset-settings").addEventListener("click", function () {
     state.settings = clone(DEFAULT_SETTINGS); buildSettings(); buildChannelInputs(); buildGradeInputs(); settingsChanged();
   });
 
+  /* ---------- value a card ---------- */
+  var HALF_LIFE_DAYS = 30, MAX_AGE_DAYS = 180;
+  var MARKET_CHANNEL = { ebay_us: "ebay_us", ebay_au: "ebay_au", ebay_uk: "ebay_uk", trademe: "trademe" };
+
+  function ageDays(iso) {
+    var t = Date.parse(iso + "T00:00:00");
+    if (!isFinite(t)) return null;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((today - t) / 864e5);
+  }
+  function compCondLabel(c) {
+    if (c.graded) return ((c.company || "Graded") + " " + (c.grade || "")).trim();
+    return RAW_CONDS[c.cond] || "Condition not stated";
+  }
+  function targetCondLabel() {
+    var v = state.value;
+    return v.graded ? (v.company + " " + (v.grade || "?")) : RAW_CONDS[v.cond];
+  }
+  function sameGrade(a, b) { return String(a || "").trim().toUpperCase() === String(b || "").trim().toUpperCase(); }
+
+  function exclusionReason(c, v) {
+    if (c.sameCard === false) return "Not the same card" + (c.mismatch ? ": " + c.mismatch : "");
+    if (c.isLot) return "Lot or bundle";
+    if (!(num(c.price) > 0)) return "No price";
+    var age = c.date ? ageDays(c.date) : null;
+    if (age === null) return "No sale date";
+    if (age < 0) return "Sale date is in the future";
+    if (age > MAX_AGE_DAYS) return "Older than 6 months";
+    if (c.bestOffer) return "Best offer accepted, real price hidden";
+    if (!!c.graded !== !!v.graded) return c.graded ? "Graded, yours is raw" : "Raw, yours is graded";
+    if (v.graded) {
+      if (!sameGrade(c.company, v.company) || !sameGrade(c.grade, v.grade)) return "Different grade (" + compCondLabel(c) + ")";
+    } else if (!RAW_CONDS[c.cond]) return "Condition not stated";
+    else if (c.cond !== v.cond) return "Different condition (" + RAW_CONDS[c.cond] + ")";
+    return "";
+  }
+
+  function weightedPct(items, p) {
+    var sorted = items.slice().sort(function (a, b) { return a.x - b.x; });
+    var total = sorted.reduce(function (a, i) { return a + i.w; }, 0), acc = 0;
+    for (var i = 0; i < sorted.length; i++) { acc += sorted[i].w; if (acc >= p * total - 1e-9) return sorted[i].x; }
+    return sorted[sorted.length - 1].x;
+  }
+  function quartiles(xs) {
+    var s = xs.slice().sort(function (a, b) { return a - b; });
+    function q(p) { var i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+    return [q(0.25), q(0.75)];
+  }
+
+  // Honest value: matching recent sales only, recency-weighted median, outliers removed, no value below 3 sales.
+  function valuate() {
+    var v = state.value, fx = state.settings.fx;
+    var rows = v.comps.map(function (c) {
+      var rate = num(fx[c.ccy]);
+      var reason = exclusionReason(c, v);
+      if (!rate && !reason) reason = "No exchange rate for " + c.ccy;
+      var total = num(c.price) + num(c.postage);
+      return { c: c, local: total, nzd: total * rate, age: c.date ? ageDays(c.date) : null, reason: reason,
+               used: c.include === true ? rate > 0 : (c.include !== false && !reason) };
+    });
+    var used = rows.filter(function (r) { return r.used; });
+    if (used.length >= 5) {
+      var q = quartiles(used.map(function (r) { return r.nzd; })), iqr = q[1] - q[0];
+      var lo = q[0] - 1.5 * iqr, hi = q[1] + 1.5 * iqr;
+      used.forEach(function (r) {
+        if (r.c.include !== true && (r.nzd < lo || r.nzd > hi)) { r.used = false; r.reason = r.nzd > hi ? "Unusually high price" : "Unusually low price"; }
+      });
+      used = rows.filter(function (r) { return r.used; });
+    }
+    used.forEach(function (r) { r.w = Math.pow(0.5, Math.max(0, r.age || 0) / HALF_LIFE_DAYS); });
+    var res = { rows: rows, used: used, n: used.length };
+    if (!used.length) return res;
+    var pts = used.map(function (r) { return { x: r.nzd, w: r.w }; });
+    res.value = weightedPct(pts, 0.5); res.p25 = weightedPct(pts, 0.25); res.p75 = weightedPct(pts, 0.75);
+    res.min = Math.min.apply(null, pts.map(function (p) { return p.x; }));
+    res.max = Math.max.apply(null, pts.map(function (p) { return p.x; }));
+    res.newest = Math.min.apply(null, used.map(function (r) { return r.age || 0; }));
+    res.spread = res.p25 > 0 ? res.p75 / res.p25 : 9;
+    res.markets = Object.keys(MARKET_CHANNEL).map(function (site) {
+      var m = used.filter(function (r) { return r.c.site === site; });
+      if (!m.length) return null;
+      var nzdVal = weightedPct(m.map(function (r) { return { x: r.nzd, w: r.w }; }), 0.5);
+      return { site: site, count: m.length, nzd: nzdVal, local: nzdVal / (num(fx[SITES[site].ccy]) || 1) };
+    }).filter(Boolean);
+    var recent = used.filter(function (r) { return r.age <= 30; }), older = used.filter(function (r) { return r.age > 30 && r.age <= 90; });
+    if (recent.length >= 2 && older.length >= 2) {
+      var wm = function (list) { return weightedPct(list.map(function (r) { return { x: r.nzd, w: 1 }; }), 0.5); };
+      res.trend = wm(recent) / wm(older) - 1;
+    }
+    if (res.n < 3) res.confidence = null;
+    else if (res.n >= 6 && res.newest <= 30 && res.spread <= 1.35) res.confidence = "High";
+    else if (res.n >= 4 && res.newest <= 60 && res.spread <= 1.6) res.confidence = "Medium";
+    else res.confidence = "Low";
+    return res;
+  }
+
+  function fmtLocal(ccy, v) { return SYMBOL[ccy] + Math.round(v).toLocaleString("en-NZ"); }
+  function whenText(age) { return age === null ? "no date" : age === 0 ? "today" : age === 1 ? "yesterday" : age + " days ago"; }
+
+  function renderValue() {
+    var v = state.value, res = valuate();
+    document.getElementById("value-example").hidden = !v.example;
+    var out = document.getElementById("v-result");
+    if (res.n < 3) {
+      out.innerHTML = '<div class="verdict warn"><strong>Not enough matching sales</strong><span>' +
+        (res.n ? "Only " + res.n + " recent sale" + (res.n > 1 ? "s match" : " matches") + " this card in " + esc(targetCondLabel()) + " (" + money(res.min) + (res.n > 1 ? " to " + money(res.max) : "") + "). " : "No recent sales match this card in " + esc(targetCondLabel()) + " yet. ") +
+        "Add at least 3 sales of this exact card in the same condition to get an honest value.</span></div>";
+    } else {
+      var confCls = { High: "good", Medium: "warn", Low: "bad" }[res.confidence];
+      var why = res.n + " matching sales, newest " + whenText(res.newest) + ".";
+      if (res.confidence !== "High") {
+        if (res.n < 6) why += " More sales would make this firmer.";
+        if (res.newest > 30) why += " No sales in the last month, so the price may have moved.";
+        if (res.spread > 1.35) why += " Prices vary a lot, so the condition of each copy probably matters.";
+      }
+      var trend = res.trend === undefined ? "" : '<span class="why">Last 30 days vs the month before: <b class="' + (res.trend >= 0 ? "pos" : "neg") + '">' + (res.trend >= 0 ? "+" : "−") + Math.abs(Math.round(res.trend * 100)) + "%</b></span>";
+      var markets = res.markets.map(function (m) {
+        return "<tr><td>" + SITES[m.site].label + "</td><td>" + m.count + "</td><td>" + (m.count >= 2 ? fmtLocal(SITES[m.site].ccy, m.local) : '<span class="meta">too few</span>') + "</td><td>" + money(m.nzd) + "</td></tr>";
+      }).join("");
+      out.innerHTML = '<div class="valuebox"><span class="label">Honest value · ' + esc(targetCondLabel()) + '<span class="pill ' + confCls + '">' + res.confidence + ' confidence</span></span>' +
+        '<span class="big">' + money(res.value) + '</span>' +
+        '<span>Most sales landed between <b>' + money(res.p25) + '</b> and <b>' + money(res.p75) + '</b>.</span>' +
+        '<span class="why">' + why + '</span>' + trend + '</div>' +
+        '<div class="tablewrap" style="padding:0"><table class="mtable"><thead><tr><th>Market</th><th>Sales</th><th>Typical price</th><th>In NZ$</th></tr></thead><tbody>' + markets + '</tbody></table></div>' +
+        '<div class="btnrow"><button class="btn primary" id="use-values" type="button">Use these prices in Where to sell</button></div>' +
+        '<p class="hint">Prices include the postage buyers paid, so compare them with listings that offer free postage.</p>';
+      document.getElementById("use-values").addEventListener("click", useValues);
+    }
+
+    var rows = res.rows.slice().sort(function (a, b) { return (b.used - a.used) || ((a.age === null ? 1e9 : a.age) - (b.age === null ? 1e9 : b.age)); });
+    document.getElementById("comps-count").textContent = "Sales: " + res.n + " used, " + (rows.length - res.n) + " left out";
+    document.getElementById("comps").innerHTML = rows.length ? rows.map(function (r) {
+      var c = r.c, pill = "";
+      if (c.include === true && r.reason) pill = '<span class="pill warn">Included by you</span>';
+      else if (c.include === false) pill = '<span class="pill bad">Left out by you</span>';
+      else if (!r.used) pill = '<span class="pill bad">' + esc(r.reason) + '</span>';
+      return '<div class="comp' + (r.used ? "" : " out") + '">' +
+        '<input type="checkbox" data-inc="' + esc(c.id) + '"' + (r.used ? " checked" : "") + ' aria-label="Use this sale">' +
+        '<div><div class="ctitle">' + esc(c.title || "Untitled sale") + '</div>' +
+        '<div class="meta">' + esc(SITES[c.site] ? SITES[c.site].label : "Other") + " · " + esc(c.date || "no date") + " (" + whenText(r.age) + ") · " + esc(compCondLabel(c)) + '</div>' + pill + '</div>' +
+        '<div class="num"><b>' + money(r.nzd) + '</b><span class="meta">' + fmtLocal(c.ccy, num(c.price)) + (num(c.postage) ? " + " + num(c.postage) + " post" : "") + '</span></div>' +
+        '<button class="xbtn" type="button" data-del="' + esc(c.id) + '" aria-label="Remove this sale">×</button></div>';
+    }).join("") : '<p class="hint">No sales yet. Paste sold listings or add one by hand.</p>';
+  }
+
+  function useValues() {
+    var res = valuate();
+    var filled = [];
+    res.markets.forEach(function (m) {
+      if (m.count < 2) return;
+      state.card.prices[MARKET_CHANNEL[m.site]] = String(Math.round(m.local));
+      state.card.on[MARKET_CHANNEL[m.site]] = true;
+      filled.push(SITES[m.site].label);
+    });
+    state.card.cond = state.value.graded ? "Graded (slab)" : RAW_CONDS[state.value.cond];
+    state.card.example = false;
+    loadCardFields(); buildChannelInputs(); renderSell(); save();
+    showTab("sell");
+  }
+
+  function leaveExample() {
+    var v = state.value;
+    if (v.example) { v.comps = v.comps.filter(function (c) { return String(c.id).indexOf("ex") !== 0; }); v.example = false; }
+  }
+  function touchValue() { renderValue(); save(); }
+
+  var vName = document.getElementById("v-name"), vDetails = document.getElementById("v-details"), vType = document.getElementById("v-type"),
+      vCond = document.getElementById("v-cond"), vCompany = document.getElementById("v-company"), vGrade = document.getElementById("v-grade");
+  function loadValueFields() {
+    var v = state.value;
+    vName.value = state.card.name; vDetails.value = v.details || ""; vType.value = v.graded ? "graded" : "raw";
+    vCond.value = v.cond || "NM"; vCompany.value = v.company || "PSA"; vGrade.value = v.grade || "";
+    document.getElementById("v-cond-wrap").hidden = !!v.graded;
+    document.getElementById("v-company-wrap").hidden = !v.graded;
+    document.getElementById("v-grade-wrap").hidden = !v.graded;
+    document.getElementById("paste-site").value = v.pasteSite || "ebay_us";
+  }
+  vName.addEventListener("input", function () { state.card.name = vName.value; nameEl.value = vName.value; state.card.example = false; renderSell(); save(); });
+  vDetails.addEventListener("input", function () { state.value.details = vDetails.value; save(); });
+  vType.addEventListener("change", function () { state.value.graded = vType.value === "graded"; loadValueFields(); touchValue(); });
+  vCond.addEventListener("change", function () { state.value.cond = vCond.value; touchValue(); });
+  vCompany.addEventListener("change", function () { state.value.company = vCompany.value; touchValue(); });
+  vGrade.addEventListener("input", function () { state.value.grade = vGrade.value; touchValue(); });
+  document.getElementById("paste-site").addEventListener("change", function (e) { state.value.pasteSite = e.target.value; save(); });
+
+  document.getElementById("comps").addEventListener("change", function (e) {
+    var id = e.target.getAttribute("data-inc"); if (!id) return;
+    var c = state.value.comps.find(function (x) { return x.id === id; }); if (!c) return;
+    // Ticking forces a sale in (even an unusual price); unticking a sale the rules would drop anyway returns it to automatic.
+    c.include = e.target.checked ? true : (exclusionReason(c, state.value) ? null : false);
+    touchValue();
+  });
+  document.getElementById("comps").addEventListener("click", function (e) {
+    var id = e.target.getAttribute && e.target.getAttribute("data-del"); if (!id) return;
+    state.value.comps = state.value.comps.filter(function (x) { return x.id !== id; });
+    touchValue();
+  });
+  var clearBtn = document.getElementById("comps-clear"), clearArmed = false;
+  clearBtn.addEventListener("click", function () {
+    if (!clearArmed) { clearArmed = true; clearBtn.textContent = "Tap again to clear"; setTimeout(function () { clearArmed = false; clearBtn.textContent = "Clear all sales"; }, 3000); return; }
+    clearArmed = false; clearBtn.textContent = "Clear all sales";
+    state.value.comps = []; state.value.example = false; touchValue();
+  });
+
+  // Manual entry
+  var aCond = document.getElementById("a-cond");
+  document.getElementById("a-date").value = isoDaysAgo(0);
+  aCond.addEventListener("change", function () { document.getElementById("a-grade-wrap").hidden = aCond.value !== "graded"; });
+  document.getElementById("a-add").addEventListener("click", function () {
+    var st = document.getElementById("add-status");
+    var price = num(document.getElementById("a-price").value), date = document.getElementById("a-date").value;
+    if (!(price > 0) || !date) { st.className = "status err"; st.textContent = "Enter the sold price and the date it sold."; return; }
+    var site = document.getElementById("a-site").value, graded = aCond.value === "graded";
+    var gm = (document.getElementById("a-grade").value || "").trim().match(/^([A-Za-z]+)\s*([\d.]+)/);
+    if (graded && !gm) { st.className = "status err"; st.textContent = "Enter the grader and grade, for example PSA 9."; return; }
+    leaveExample();
+    state.value.comps.push({ id: "m" + Date.now().toString(36), date: date, site: site, ccy: SITES[site].ccy, price: price,
+      postage: num(document.getElementById("a-post").value), graded: graded, cond: graded ? "graded" : aCond.value,
+      company: graded ? gm[1].toUpperCase() : null, grade: graded ? gm[2] : null,
+      title: document.getElementById("a-title").value || (state.card.name || "Sale"), sameCard: true, mismatch: null, isLot: false, bestOffer: false, include: null });
+    document.getElementById("a-price").value = ""; document.getElementById("a-post").value = ""; document.getElementById("a-title").value = "";
+    st.className = "status"; st.textContent = "Sale added.";
+    touchValue();
+  });
+
+  // Paste reading via Claude (extraction only; the value itself is calculated above)
+  var sampleFn = null, pasteCtl = null;
+  var readBtn = document.getElementById("paste-read"), stopBtn = document.getElementById("paste-stop"), pStatus = document.getElementById("paste-status");
+  (async function () {
+    try { if (window.claude && window.claude.use) sampleFn = await window.claude.use("sample"); } catch (e) { sampleFn = null; }
+    document.getElementById("paste-box").hidden = !sampleFn;
+  })();
+
+  function buildPrompt(text) {
+    var v = state.value, site = SITES[v.pasteSite || "ebay_us"];
+    return [
+      "You are extracting SOLD Pokémon card listings from text a seller copied from a website (eBay sold listings, 130point, PriceCharting or Trade Me). Today is " + isoDaysAgo(0) + ".",
+      "The card being valued: \"" + (state.card.name || "unknown") + "\" — " + (v.details || "no extra details") + ". The seller's copy is " + targetCondLabel() + ".",
+      "Most of the text came from " + site.label + " (prices in " + site.ccy + " unless the text shows another currency).",
+      "Rules:",
+      "- Only include listings that appear in the text AND sold. Skip active or unsold listings, ads and sponsored items. Never invent, estimate or fill in anything.",
+      "- price: the sold price of the item only, as a number. postage: what the buyer paid for postage or delivery, 0 if free or not shown.",
+      "- bestOffer: true if it says best offer accepted and the actual accepted price is not shown.",
+      "- date: the sale date as YYYY-MM-DD (use the most recent past date if the year is missing), or null if not shown.",
+      "- site: one of ebay_us, ebay_au, ebay_uk, trademe, other. currency: one of NZD, USD, AUD, GBP, EUR.",
+      "- graded: true if the card is in a grading slab (PSA, CGC, BGS, ACE, TAG and so on), with company and grade as text. For raw cards, cond is NM, LP, MP, HP or DMG, or unknown if the listing does not say. eBay 'Near mint or better' counts as NM.",
+      "- sameCard: false if it is not the card being valued (different set or number, different language, different artwork or variant, proxy, custom, fake, or only a case or sleeve). Put a short reason in mismatch.",
+      "- isLot: true if more than one card is sold together.",
+      "Reply with only a JSON array, one object per sale, like:",
+      '[{"title":"Umbreon VMAX 215/203 NM","site":"ebay_us","currency":"USD","price":560,"postage":0,"date":"2026-10-12","graded":false,"company":null,"grade":null,"cond":"NM","sameCard":true,"mismatch":null,"isLot":false,"bestOffer":false}]',
+      "If there are no sold listings, reply with [].",
+      "",
+      "Copied text:",
+      "<<<",
+      text.slice(0, 60000),
+      ">>>"
+    ].join("\n");
+  }
+  function cleanComp(o, i) {
+    if (!o || typeof o !== "object") return null;
+    var price = num(o.price); if (!(price > 0)) return null;
+    var site = SITES[o.site] ? o.site : (state.value.pasteSite || "other");
+    var ccy = state.settings.fx[o.currency] ? o.currency : SITES[site].ccy;
+    var date = /^\d{4}-\d{2}-\d{2}$/.test(String(o.date)) ? String(o.date) : null;
+    var graded = o.graded === true;
+    return { id: "p" + Date.now().toString(36) + i, date: date, site: site, ccy: ccy, price: price, postage: Math.max(0, num(o.postage)),
+      graded: graded, cond: graded ? "graded" : (RAW_CONDS[o.cond] ? o.cond : "unknown"),
+      company: graded ? String(o.company || "Graded").slice(0, 12) : null, grade: graded ? String(o.grade || "").slice(0, 6) : null,
+      title: String(o.title || "Sale").slice(0, 160), sameCard: o.sameCard !== false, mismatch: o.mismatch ? String(o.mismatch).slice(0, 80) : null,
+      isLot: o.isLot === true, bestOffer: o.bestOffer === true, include: null };
+  }
+  readBtn.addEventListener("click", async function () {
+    var text = document.getElementById("paste-text").value.trim();
+    if (!text) { pStatus.className = "status err"; pStatus.textContent = "Paste some sold listings first."; return; }
+    if (!sampleFn) return;
+    pasteCtl = new AbortController();
+    readBtn.disabled = true; stopBtn.hidden = false;
+    pStatus.className = "status"; pStatus.textContent = "Reading sales. This can take up to a minute.";
+    try {
+      var data = await sampleFn.json(buildPrompt(text), { signal: pasteCtl.signal });
+      var list = (Array.isArray(data) ? data : []).map(cleanComp).filter(Boolean);
+      if (!list.length) { pStatus.className = "status err"; pStatus.textContent = "No sold listings found in that text. Make sure the Sold items filter is on before copying."; return; }
+      leaveExample();
+      state.value.comps = state.value.comps.concat(list);
+      document.getElementById("paste-text").value = "";
+      touchValue();
+      var matched = list.filter(function (c) { return !exclusionReason(c, state.value); }).length;
+      pStatus.className = "status"; pStatus.textContent = "Found " + list.length + " sales. " + matched + " match your card and condition.";
+    } catch (e) {
+      var code = e && e.code;
+      pStatus.className = "status err";
+      if (code === "cancelled") { pStatus.className = "status"; pStatus.textContent = "Stopped."; }
+      else if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].indexOf(code) >= 0) {
+        document.getElementById("paste-box").hidden = true;
+        document.getElementById("add-status").textContent = "Reading pasted sales isn't available here. Add sales by hand instead.";
+      }
+      else if (code === "rate_limited") pStatus.textContent = "Too many requests right now. Try again in a minute.";
+      else if (code === "prompt_too_large") pStatus.textContent = "That's too much text. Paste one page of results at a time.";
+      else if (code === "invalid_json" || code === "refused" || code === "empty_completion") pStatus.textContent = "Couldn't read sales from that text. Try copying just the list of sold results.";
+      else if (code === "session_expired") pStatus.textContent = "Sign in to Claude again, then try again.";
+      else pStatus.textContent = "Something went wrong. Try again.";
+    } finally {
+      readBtn.disabled = false; stopBtn.hidden = true; pasteCtl = null;
+    }
+  });
+  stopBtn.addEventListener("click", function () { if (pasteCtl) pasteCtl.abort(); });
+
   /* ---------- boot ---------- */
-  loadCardFields(); buildChannelInputs(); buildGradeInputs(); buildSettings();
-  renderSell(); renderGrade();
-  showTab(tabs.indexOf(state.tab) >= 0 ? state.tab : "sell");
+  loadCardFields(); loadValueFields(); buildChannelInputs(); buildGradeInputs(); buildSettings();
+  renderSell(); renderGrade(); renderValue();
+  showTab(tabs.indexOf(state.tab) >= 0 ? state.tab : "value");
 })();
 </script>
