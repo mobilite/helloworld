@@ -1,131 +1,110 @@
-# Phase 0 — Foundations: Plan
+# Phase 0 — Foundations: Plan (revised)
 
 Status: **draft, awaiting owner approval** (per SPEC §15). No application code has been written yet.
 
-Goal: by the end of this phase, the Phase 0 acceptance criteria in SPEC §13 are met. That means a deployable, CI-checked Next.js shell with the database, cache and admin auth wired up, plus a replay harness that plays a recorded race from fixtures through a local mock of OpenF1.
+## Scope change (owner direction, 2026-11-08)
+
+The app no longer shows live race position or timing. **Race Live is removed.** Its replacement is **Race Chat**: a live feed of what people are saying on social media about Liam Lawson while a session is on.
+
+What this changes from SPEC v1:
+
+| SPEC v1 | Revised |
+|---|---|
+| Race Live: position, gaps, tyres, pits, track map (§5) | **Removed.** No `LawsonSnapshot`, no live OpenF1 subscription, no track map |
+| Social posts were one input to the Story Feed, X disabled by default | **Social chat during sessions is the main feature** |
+| OpenF1 paid subscription (§14.1) | Not needed. A free schedule source is only used to know *when* a session is on |
+| Replay harness of OpenF1 timing data | Replay harness of **social posts** on a virtual race clock |
+
+Still to confirm (see §0): whether the Story Feed and Claims Check stay.
 
 ---
 
-## 0. Blocking questions (please answer before I start)
+## 0. Questions for the owner
 
-1. **Where does the app live?** This repo (`mobilite/helloworld`) currently holds **CardLedger**, an unrelated Pokémon card project, and SPEC §11.1 expects `/app`, `/lib`, `/db` and so on at the repo root. Options:
-   - **(a) New repo, e.g. `lawson-watch` (recommended).** Cleanest, and keeps Vercel, CI and Dependabot simple. You'd create the empty repo and add it to this session. I can't create repositories from here.
-   - **(b) Subfolder `lawson-watch/` in this repo.** This works, but Vercel gets a "Root Directory" setting and CI needs `working-directory`, which goes against SPEC §11.1's layout.
-   - **(c) Replace CardLedger at the root** (move it to a branch or archive). I won't do this without an explicit yes.
-2. **Network access for this build session.** This cloud session can't currently reach `api.openf1.org`, `api.jolpi.ca` or `vercel.com`. I need `api.openf1.org` and `api.jolpi.ca` (exact hosts) to record fixtures and to check current API docs, as SPEC §15 requires. Until then, fixture recording is blocked (see §6).
-3. **Licence:** OK with MIT for the code (SPEC §11.2 default)?
-
-The owner decisions in SPEC §14 (OpenF1 sponsor tier, Vercel Pro, X budget, name) **don't** block Phase 0. Everything here runs replay-only and degrades cleanly without them.
+1. **Which repo should this go in?** This is unchanged from the first draft. My recommendation is a new repo, e.g. `lawson-watch`, because this one holds CardLedger.
+2. **Do the Story Feed (news) and Claims Check stay?**
+   - If Claims Check stays, it still needs free *historical* results data (Jolpica/OpenF1) to check result claims after a race. This is not live timing.
+   - If both are dropped, the app becomes Race Chat only.
+3. **Which social sources?** Live keyword search is only possible on some platforms (see §1). X is the obvious one, but it is pay-per-use and is the main running cost.
+4. **Abuse filtering:** OK to hide abusive or hateful posts by default (see §2)?
+5. **Licence:** MIT for the code?
 
 ---
 
-## 1. Scaffold
+## 1. Sources for Race Chat
 
-- `pnpm create next-app` with App Router, TypeScript (`strict: true`, plus `noUncheckedIndexedAccess`), ESLint, Tailwind and the `src`-less layout to match §11.1.
-- Prettier, `eslint-config-prettier`, and `pnpm` pinned through `packageManager` in `package.json`. `.nvmrc` set to Node 22.
-- shadcn/ui initialised, with only the primitives we need for now: Button, Card, Badge and Sheet.
-- Directory skeleton exactly as SPEC §11.1. Empty modules get typed stubs that throw `NotImplemented`, so nothing is silently half-built.
-- Route stubs:
-  - `/`
-  - `/live`
-  - `/replay/[sessionKey]`
-  - `/stories` (placeholder: "Coming in Phase 2")
-  - `/about` with the full §12 disclaimer text
-  - `/admin`
+Each option below needs its current terms and pricing checked against the platform's docs before I use it. This session's network blocks those sites, so none of this is verified yet.
 
-## 2. Config & env
+| Source | Live keyword search? | Cost | Notes |
+|---|---|---|---|
+| **X API** (recent search) | Yes | Pay-per-use, likely the largest cost on race day | Volume spikes during races. Needs a hard daily cap (SPEC §9). Posts are displayed via official embed or under X's display rules |
+| **Bluesky** (AT Protocol: `searchPosts`, or Jetstream firehose) | Yes | Free, open API | A good free primary or secondary source. Has a growing F1 community |
+| **Reddit** (r/formula1 race-day threads) | Thread polling | API terms and pricing for this use need checking | Race threads are where much F1 chat happens. Comments mentioning Lawson can be filtered from them |
+| **YouTube** live chat on watch-along streams | Per-stream only | Uses Data API quota | Optional. Needs a curated channel list |
+| Instagram / TikTok | No official keyword search | — | Still out of scope. Only curated official-account embeds |
 
-- `.env.example` with every variable from SPEC §10, each commented.
-- `lib/env.ts` parses `process.env` with Zod into a typed config. Only `DATABASE_URL`, `UPSTASH_REDIS_REST_URL`/`TOKEN` and `CRON_SECRET` are required. Every other integration is exposed as `config.openf1.live: boolean`, `config.x.enabled`, and so on, so features check one flag rather than poking env vars.
-- Replay-only boot test: the app builds and serves with only the required vars set.
+Proposed v1: **Bluesky + X (capped)**, with Reddit if the terms allow it.
 
-## 3. Database (Neon + Drizzle)
+## 2. Race Chat behaviour (Phase 1 replacement, outlined here for context)
 
-- `db/schema.ts` holds **all** tables from SPEC §8 now, so later phases add columns rather than reshaping. Details:
-  - FK indexes and indexes on queried timestamps.
-  - `items.canonical_url` is unique.
-  - `items.embedding` is `vector(N)`. N gets pinned when the embedding model is chosen in Phase 2, so the column ships as nullable and a Phase 2 migration fixes the dimension. I'll flag this in the Phase 2 plan.
-  - **No body/content column on `items`.** A schema test asserts this, which gets ahead of a Phase 2 criterion.
-  - Phase 3 guard prepared now: a CHECK/trigger so a `claims.current_label = 'verified_by_data'` row must have at least one `claim_evidence` row. If a trigger proves awkward under Drizzle, I'll use a deferred constraint trigger written as raw SQL in a migration.
-- First migration enables `pgvector`.
-- `drizzle-kit generate` produces SQL migrations that are committed. `pnpm db:migrate` runs them, and CI/deploy calls it. They never run on cold start (§11.3).
-- `lib/db.ts` uses the `@neondatabase/serverless` driver.
-- Local dev and tests use Postgres 16 + pgvector in Docker (`docker-compose.yml`), so CI doesn't need a Neon branch. Neon preview branches per PR can come later.
+- **Session-aware.** A free schedule source (Jolpica, OpenF1 `sessions`) tells the app when a session is live. Polling runs at a race-day pace from about 30 min before the start to 1h after the finish. Between races it runs slowly or not at all.
+- **Driver-keyed.** The search terms come from `DRIVER_FULL_NAME`, `DRIVER_ACRONYM` and a configurable hashtag list. No team is hardcoded.
+- **Relevance filter.** Rules first: the post mentions Lawson plus F1 context. A cheap LLM pass then handles ambiguous posts and other people called Liam Lawson. It runs in batches and is capped by budget.
+- **Abuse and safety filter (on by default).** Lawson has drawn heavy online abuse. Without filtering, a feed of raw posts would amplify it. Posts classified as abusive, hateful or harassing are hidden, as are slurs, and so are posts aimed at his family or partner (in line with SPEC's personal-life exclusion). The filter is conservative: when unsure, it hides.
+- **Feed UI.** A single scrolling column of posts, newest first, with an "N new posts" pill rather than a jumping list. Filters: All / Top (engagement) / Verified & official accounts.
+- **Moments.** Spikes in post volume are detected and labelled with the race time ("Big spike at 14:32 — 3× normal"). Post counts are the signal, not timing data.
+- **Fail visible.** The badge shows each source's status ("X paused — daily budget reached", "Bluesky live").
+- **After the race** the chat is archived per session and replayable.
 
-## 4. Redis (Upstash)
+## 3. Scaffold, config, DB, Redis, auth, CI
 
-- `lib/redis.ts` uses `@upstash/redis`. Helpers: `getJSON`/`setJSON` with TTL, and `withLock(key, ttl, fn)` (SET NX PX), which the token refresh in Phase 1 needs.
-- Test double: an in-memory implementation behind the same interface, so unit tests don't need Upstash.
+These parts are unchanged from the first draft:
 
-## 5. Admin auth
+- Next.js App Router, strict TypeScript, Tailwind + shadcn/ui
+- Zod-validated env
+- Drizzle + Neon (pgvector)
+- Upstash Redis with lock helper
+- Auth.js GitHub allowlist for `/admin`
+- `requireCronSecret`
+- pino logging
+- `lib/budget.ts`
+- CI (typecheck, lint, Vitest with Postgres service, build)
+- Playwright smoke tests
+- Dependabot, README, `.env.example`
 
-- Auth.js v5 with the GitHub provider. The `signIn` callback allows only logins in `ADMIN_GITHUB_LOGINS`, compared case-insensitively. GitHub login is used, never email.
-- `middleware.ts` gates `/admin/**`. Everyone else gets 404, not 403, to avoid advertising the route.
-- With the auth vars absent, `/admin` shows "Admin not configured" and the public site is unaffected.
-- `lib/jobs/auth.ts` provides `requireCronSecret(req)` for `/api/jobs/*`, using a constant-time compare.
-- Tests cover an allowlisted login, a non-allowlisted login, a missing config, and a bad cron secret.
+Route and schema changes:
 
-## 6. Replay harness (the main Phase 0 deliverable)
+- **Routes:** `/` (next session countdown, or the live chat when a session is on), `/chat/[sessionKey]` (live or archived), `/about`, `/admin`. `/live` and `/replay` are removed.
+- **New tables:**
+  - `social_posts`: id, platform, platform_post_id **unique**, author_handle, author_is_official, posted_at, fetched_at, url, session_key, relevance, abuse_flag, hidden, engagement_json. Post text is only stored where the platform's terms allow it. For X, store IDs and render via embed.
+  - `chat_sessions`: session_key, start/end, status, post counts.
+  - `chat_moments`: session_key, at, post_rate, label.
+- **Unchanged tables:** `sources`, `audit_log` and `budget_usage`. Story and claim tables stay only if you keep those features (Q2).
+- **Env:**
+  - Add `BLUESKY_*`, `REDDIT_*`, `DRIVER_HASHTAGS`, and `HIDE_ABUSE=true`.
+  - Drop `OPENF1_USERNAME/PASSWORD`.
+  - X becomes `X_ENABLED` plus a cap. It may still default to false until you set a budget.
 
-- **Recorder** (`scripts/record-session.ts`): given a `session_key`, it pulls every endpoint listed in SPEC §5.1 from OpenF1's free historical API, politely and within its rate limits. Responses are saved as `tests/fixtures/openf1/<session_key>/<endpoint>.json` with a `manifest.json` that records the fetch time, the source URL and the record counts.
-  - `location` is large (car positions at about 3.7 Hz). I'll record **only Lawson's car**, plus a single lap of one car for the track outline, and gzip it. If fixtures still exceed a few MB, I'll use Git LFS or a down-sampled copy for tests. I'll report the actual sizes.
-  - Default fixture: a full 2026 race that Lawson started. I'll pick one with pit-stop position changes, which is useful for Phase 1 acceptance testing.
-- **Mock server** (`tests/mock-openf1/`): a small Node HTTP server (also usable as MSW handlers in Vitest) that serves the fixtures and honours OpenF1's query filters that we use: `session_key`, `driver_number`, and `date>`/`date<`.
-  - It has a **virtual clock**: started with `--speed 10 --from <lap|iso>`, it only returns records with `date <= now_virtual`. This lets the same code path behave as if live.
-- `lib/sources/openf1.ts` gets its typed interface and Zod schemas now, with an implementation that has a configurable base URL. The mock base URL is used in dev/test and the real one in prod. Phase 1 builds the snapshot on top of this.
-- Acceptance: `pnpm replay:mock` starts the mock server. A Vitest integration test walks the virtual clock through the whole race and checks that every endpoint returns monotonic, filter-respecting data.
+## 4. Replay harness (revised)
 
-## 7. Design shell
+- The harness uses **synthetic fixtures**: realistic generated posts on a race timeline (start, incidents, pit window, finish), with spikes. They are not copies of real users' posts. This avoids committing third-party users' content to the repo (a platform-terms and privacy issue, especially for a public repo).
+- It also includes **real recorded API responses with the text stripped or replaced**, so each adapter's Zod schemas are tested against real response shapes.
+- A mock server serves the X / Bluesky / Reddit search endpoints on a **virtual clock** (`--speed 10`). The full ingest → filter → feed path then runs as if live.
+- Acceptance: a full simulated race plays through the chat UI locally. The abuse-filter test fixtures confirm flagged posts never render.
 
-- Mobile-first layout with:
-  - a header showing `APP_NAME`
-  - a footer carrying the §12 disclaimer and a "Report an issue" link
-  - a dark theme by default, for the 1–4am viewing
-  - a neutral palette with no F1 or team marks
-- Original simple wordmark and icon (text + generic SVG). The team colour will only ever come from data as a hex value.
-- Shared `FreshnessBadge` component, built now because §2.5 "fail visible" runs throughout. It's green, amber or red with plain-English copy.
-- Times are rendered with `Intl.DateTimeFormat` in the viewer's zone, falling back to `Pacific/Auckland`. Copy is in NZ English.
-
-## 8. Logging, budget skeleton
-
-- `lib/log.ts`: pino, structured JSON, with a request ID.
-- `lib/budget.ts`: interface and Redis counters only (`charge(service, units, usd)` and `isOverCap(service)`), with unit tests. It gets wired to real services in Phase 2.
-
-## 9. CI / repo hygiene
-
-- `.github/workflows/ci.yml`, run on PRs and on `main`:
-  - `pnpm install --frozen-lockfile`
-  - typecheck
-  - lint
-  - Vitest, with a Postgres+pgvector service container and migrations applied
-  - `next build`
-- `.github/workflows/e2e.yml`: Playwright smoke tests (home renders, disclaimer present, `/admin` gated) against the Vercel preview URL, triggered by the `deployment_status` event. This only works once Vercel is connected, so until then it runs against a local `next start`.
-- `.github/dependabot.yml` for npm and GitHub Actions, weekly.
-- README covering setup, env vars, running replay locally, adding a source, cost notes, and the "data isn't ours" licence note. MIT `LICENSE`, pending your answer to Q3.
-- `vercel.json`: functions region `syd1`. The cron block will be included **only as comments/plan** until you decide between Pro and Hobby. A sub-daily cron on Hobby would fail the deploy.
-
-## 10. What you need to do (I can't do these from here)
+## 5. What you need to do
 
 | Step | Why |
 |---|---|
-| Create the repo (if option 1a) and add it to this session | §0 Q1 |
-| Allow `api.openf1.org`, `api.jolpi.ca` in this session's network | Fixtures + doc checks |
-| Vercel: import the repo, add the Neon and Upstash Marketplace integrations (Sydney region), and set `CRON_SECRET` and `AUTH_*` | Deploy, DB, cache, admin login |
-| GitHub OAuth app (callback `https://<domain>/api/auth/callback/github`) | Admin login |
-| Branch protection on `main` | §11.2 |
+| Answer §0 | Scope and sources |
+| Create the repo and add it to this session | §0 Q1 |
+| Allow the source hosts in this session's network (e.g. `api.x.com`, `public.api.bsky.app`, `oauth.reddit.com`, `api.jolpi.ca`) | Check current docs; record response shapes |
+| Vercel + Neon + Upstash, GitHub OAuth app, protect `main` | Deploy, DB, cache, admin |
+| Set an X budget when you're ready | X is off until then |
 
-## 11. Out of scope for Phase 0
+## 6. Risks
 
-- Any `LawsonSnapshot` computation or Race Live UI (Phase 1).
-- Any ingestion or LLM calls.
-- Real-time OpenF1 auth: the interface is stubbed, but there's no token call until there's a subscription.
-
-## 12. Risks / notes
-
-- **OpenF1 terms change often.** I couldn't verify current pricing or auth from this session because the network was blocked. A web search suggests real-time access needs the paid sponsor tier and a token from `POST /token`, but I'll re-check the official docs before writing any live code (Phase 1).
-- **Vercel cron limits by plan:** unverified for the same reason. I'll re-check before writing `vercel.json` crons.
-- **Fixture size and licensing:** these are recorded third-party data committed to the repo. If the repo is public, I'd keep fixtures minimal (one race) and note their source in the README.
-
-## Estimated output
-
-About 1 PR (or 3 small ones: scaffold+CI, DB+auth, replay harness). PRs target `main` from feature branches.
+- **Cost:** chat volume peaks exactly when we poll most. The X cap will cut out mid-race if it is set too low. I'll make it show plainly when that happens, and lean on Bluesky so the feed keeps going.
+- **Platform terms:** display, storage and "aggregation" rules differ by platform and change often. I'll check each before building its adapter.
+- **Abuse amplification:** this is a reputational and ethical risk. That's why filtering is on by default and there is a human-review path in `/admin`.
+- **Unverified so far:** no platform docs could be reached from this session. Everything in §1 is to be confirmed.
